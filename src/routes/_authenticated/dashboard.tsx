@@ -52,6 +52,187 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
   component: Dashboard,
 });
 
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function MagneticButton({
+  children,
+  className,
+  variant = "primary",
+  size = "md",
+  ...props
+}: React.ComponentProps<typeof Button>) {
+  const ref = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const coarsePointer = window.matchMedia("(pointer: coarse)").matches;
+    if (reducedMotion || coarsePointer) return;
+
+    let raf = 0;
+    let currentX = 0;
+    let currentY = 0;
+    let targetX = 0;
+    let targetY = 0;
+
+    const apply = () => {
+      const scale = 1 + (Math.abs(currentX) + Math.abs(currentY)) * 0.015;
+      node.style.transform = `translate(${currentX}px, ${currentY}px) scale(${scale})`;
+      raf = 0;
+    };
+
+    const onMove = (event: PointerEvent) => {
+      const rect = node.getBoundingClientRect();
+      const dx = event.clientX - (rect.left + rect.width / 2);
+      const dy = event.clientY - (rect.top + rect.height / 2);
+
+      targetX = clamp((dx / rect.width) * 7, -5, 5);
+      targetY = clamp((dy / rect.height) * 7, -5, 5);
+
+      if (!raf) {
+        raf = window.requestAnimationFrame(() => {
+          currentX += (targetX - currentX) * 0.25;
+          currentY += (targetY - currentY) * 0.25;
+          apply();
+        });
+      }
+    };
+
+    const onLeave = () => {
+      targetX = 0;
+      targetY = 0;
+      if (!raf) {
+        raf = window.requestAnimationFrame(() => {
+          currentX += (targetX - currentX) * 0.2;
+          currentY += (targetY - currentY) * 0.2;
+          apply();
+        });
+      }
+    };
+
+    node.addEventListener("pointermove", onMove);
+    node.addEventListener("pointerleave", onLeave);
+
+    return () => {
+      node.removeEventListener("pointermove", onMove);
+      node.removeEventListener("pointerleave", onLeave);
+      if (raf) window.cancelAnimationFrame(raf);
+      node.style.transform = "";
+    };
+  }, []);
+
+  return (
+    <div ref={ref} className="inline-flex will-change-transform">
+      <Button {...props} variant={variant} size={size} className={className}>
+        {children}
+      </Button>
+    </div>
+  );
+}
+
+function MagneticLink({
+  children,
+  className,
+  to,
+  variant = "primary",
+  size = "md",
+  ...props
+}: React.ComponentProps<typeof Link> & {
+  children: React.ReactNode;
+  to: string;
+  variant?: "primary" | "secondary" | "ghost" | "danger";
+  size?: "sm" | "md" | "lg";
+}) {
+  const ref = useRef<HTMLAnchorElement | null>(null);
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const coarsePointer = window.matchMedia("(pointer: coarse)").matches;
+    if (reducedMotion || coarsePointer) return;
+
+    let raf = 0;
+    let currentX = 0;
+    let currentY = 0;
+    let targetX = 0;
+    let targetY = 0;
+
+    const apply = () => {
+      const scale = 1 + (Math.abs(currentX) + Math.abs(currentY)) * 0.015;
+      node.style.transform = `translate(${currentX}px, ${currentY}px) scale(${scale})`;
+      raf = 0;
+    };
+
+    const onMove = (event: PointerEvent) => {
+      const rect = node.getBoundingClientRect();
+      const dx = event.clientX - (rect.left + rect.width / 2);
+      const dy = event.clientY - (rect.top + rect.height / 2);
+
+      targetX = clamp((dx / rect.width) * 7, -5, 5);
+      targetY = clamp((dy / rect.height) * 7, -5, 5);
+
+      if (!raf) {
+        raf = window.requestAnimationFrame(() => {
+          currentX += (targetX - currentX) * 0.25;
+          currentY += (targetY - currentY) * 0.25;
+          apply();
+        });
+      }
+    };
+
+    const onLeave = () => {
+      targetX = 0;
+      targetY = 0;
+      if (!raf) {
+        raf = window.requestAnimationFrame(() => {
+          currentX += (targetX - currentX) * 0.2;
+          currentY += (targetY - currentY) * 0.2;
+          apply();
+        });
+      }
+    };
+
+    node.addEventListener("pointermove", onMove);
+    node.addEventListener("pointerleave", onLeave);
+
+    return () => {
+      node.removeEventListener("pointermove", onMove);
+      node.removeEventListener("pointerleave", onLeave);
+      if (raf) window.cancelAnimationFrame(raf);
+      node.style.transform = "";
+    };
+  }, [to]);
+
+  return (
+    <Link
+      ref={ref}
+      to={to}
+      className={cn(
+        "inline-flex items-center justify-center gap-2 rounded-xl font-medium transition-all disabled:cursor-not-allowed disabled:opacity-50",
+        size === "sm" && "px-3 py-1.5 text-xs",
+        size === "md" && "px-4 py-2.5 text-sm",
+        size === "lg" && "px-6 py-3 text-sm sm:text-base",
+        variant === "primary" &&
+          "bg-primary text-primary-foreground shadow-[var(--shadow-card)] hover:-translate-y-px hover:shadow-[var(--shadow-raised)] hover:brightness-110 active:translate-y-0 active:scale-[0.98] active:brightness-95",
+        variant === "secondary" &&
+          "border border-border bg-card text-foreground hover:-translate-y-px hover:bg-secondary active:translate-y-0 active:scale-[0.98]",
+        variant === "ghost" && "text-muted-foreground hover:bg-secondary hover:text-foreground",
+        variant === "danger" && "bg-destructive text-destructive-foreground hover:brightness-110",
+        className,
+      )}
+      {...props}
+    >
+      {children}
+    </Link>
+  );
+}
+
 function Dashboard() {
   const { user } = useAuth();
   const dna = useSkillDna();
@@ -71,11 +252,15 @@ function Dashboard() {
 
   // Live task-completion feedback: real BKT values, shown inline, faded out.
   // `via` tells us which surface triggered it so the feedback renders there.
-  const [completion, setCompletion] = useState<
-    { name: string; previous: number; next: number; via: "next" | "review" } | null
-  >(null);
+  const [completion, setCompletion] = useState<{
+    name: string;
+    previous: number;
+    next: number;
+    via: "next" | "review";
+  } | null>(null);
   const [completionVisible, setCompletionVisible] = useState(false);
   const fadeTimer = useRef<number | null>(null);
+  const heroCardTiltRef = useRef<HTMLDivElement | null>(null);
   useEffect(
     () => () => {
       if (fadeTimer.current) window.clearTimeout(fadeTimer.current);
@@ -90,6 +275,65 @@ function Dashboard() {
     setDeadline(dna.profile.deadline_date ?? "");
     setMinutes(String(dna.profile.daily_time_minutes ?? 45));
   }, [dna.profile]);
+
+  useEffect(() => {
+    const node = heroCardTiltRef.current;
+    if (!node) return;
+
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const coarsePointer = window.matchMedia("(pointer: coarse)").matches;
+    if (reducedMotion || coarsePointer) return;
+
+    let raf = 0;
+    let currentX = 0;
+    let currentY = 0;
+    let targetX = 0;
+    let targetY = 0;
+
+    const apply = () => {
+      node.style.transform = `perspective(1200px) rotateX(${currentY}deg) rotateY(${currentX}deg) translateY(-1px)`;
+      raf = 0;
+    };
+
+    const onMove = (event: PointerEvent) => {
+      const rect = node.getBoundingClientRect();
+      const px = (event.clientX - rect.left) / rect.width;
+      const py = (event.clientY - rect.top) / rect.height;
+
+      targetY = clamp((0.5 - py) * 8, -4, 4);
+      targetX = clamp((px - 0.5) * 8, -4, 4);
+
+      if (!raf) {
+        raf = window.requestAnimationFrame(() => {
+          currentX += (targetX - currentX) * 0.14;
+          currentY += (targetY - currentY) * 0.14;
+          apply();
+        });
+      }
+    };
+
+    const onLeave = () => {
+      targetX = 0;
+      targetY = 0;
+      if (!raf) {
+        raf = window.requestAnimationFrame(() => {
+          currentX += (targetX - currentX) * 0.14;
+          currentY += (targetY - currentY) * 0.14;
+          apply();
+        });
+      }
+    };
+
+    node.addEventListener("pointermove", onMove);
+    node.addEventListener("pointerleave", onLeave);
+
+    return () => {
+      node.removeEventListener("pointermove", onMove);
+      node.removeEventListener("pointerleave", onLeave);
+      if (raf) window.cancelAnimationFrame(raf);
+      node.style.transform = "";
+    };
+  }, []);
 
   const snapshotQuery = useQuery({
     queryKey: ["plan-snapshot", user?.id],
@@ -255,14 +499,12 @@ function Dashboard() {
           >
             Insights
           </Button>
-          <Link to="/diagnostic">
-            <Button variant="secondary" size="sm">
-              Recalibrate
-            </Button>
-          </Link>
-          <Link to="/plan">
-            <Button size="sm">Continue learning</Button>
-          </Link>
+          <MagneticLink to="/diagnostic" variant="secondary" size="sm">
+            Recalibrate
+          </MagneticLink>
+          <MagneticLink to="/plan" size="sm">
+            Continue learning
+          </MagneticLink>
         </div>
       }
     >
@@ -280,8 +522,8 @@ function Dashboard() {
           <p className="text-sm font-medium text-foreground">One quick clarification</p>
           <p className="mt-1 text-sm text-muted-foreground [overflow-wrap:anywhere]">
             “{dna.profile.goal_text ?? "Your goal"}” isn't one of the ready-made tracks. Build a
-            dedicated skill map for exactly that goal with AI — or switch to the closest
-            ready-made track.
+            dedicated skill map for exactly that goal with AI — or switch to the closest ready-made
+            track.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             {dna.profile.goal_text ? (
@@ -321,122 +563,124 @@ function Dashboard() {
         aria-label="Next best step"
         className={cn(
           "animate-enter relative overflow-hidden rounded-2xl border bg-card px-5 py-6 shadow-[var(--shadow-raised)] transition-[border-color,box-shadow] duration-500 sm:px-8 sm:py-7",
+          "pm-spot",
           heroFlash ? "border-success/60" : "border-primary/30",
         )}
       >
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -right-28 -top-28 h-72 w-72 rounded-full bg-primary/10 blur-3xl"
-        />
-        {dna.loading ? (
-          <div className="relative">
-            <Skeleton className="h-5 w-28" />
-            <Skeleton className="mt-4 h-8 w-2/3" />
-            <Skeleton className="mt-3 h-4 w-full max-w-xl" />
-            <Skeleton className="mt-6 h-11 w-64" />
-          </div>
-        ) : next ? (
-          <div className="relative grid gap-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
-            <div className="min-w-0">
-              <p className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.16em] text-primary">
-                <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-primary" />
-                Start here next
-              </p>
-              <h2 className="mt-2.5 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-                {next.name}
-              </h2>
-              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-                {next.description}
-              </p>
-              <div className="mt-4 flex flex-wrap items-center gap-2">
-                <Badge tone="neutral">About {next.effort_hours} h</Badge>
-                <Badge tone="neutral">
-                  Ready now · {masteryLabel(dna.decayed.get(next.id))}
-                </Badge>
-                <Badge tone={next.is_required ? "info" : "neutral"}>
-                  {next.is_required ? "Needed for your goal" : "Nice to have"}
-                </Badge>
-                {dna.hiddenGapIds.has(next.id) ? (
-                  <Badge tone="warning">Missing piece</Badge>
-                ) : null}
+        <div ref={heroCardTiltRef} className="relative">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -right-28 -top-28 h-72 w-72 rounded-full bg-primary/10 blur-3xl"
+          />
+          {dna.loading ? (
+            <div className="relative">
+              <Skeleton className="h-5 w-28" />
+              <Skeleton className="mt-4 h-8 w-2/3" />
+              <Skeleton className="mt-3 h-4 w-full max-w-xl" />
+              <Skeleton className="mt-6 h-11 w-64" />
+            </div>
+          ) : next ? (
+            <div className="relative grid gap-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+              <div className="min-w-0">
+                <p className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.16em] text-primary">
+                  <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-primary" />
+                  Start here next
+                </p>
+                <h2 className="mt-2.5 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+                  {next.name}
+                </h2>
+                <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+                  {next.description}
+                </p>
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  <Badge tone="neutral">About {next.effort_hours} h</Badge>
+                  <Badge tone="neutral">Ready now · {masteryLabel(dna.decayed.get(next.id))}</Badge>
+                  <Badge tone={next.is_required ? "info" : "neutral"}>
+                    {next.is_required ? "Needed for your goal" : "Nice to have"}
+                  </Badge>
+                  {dna.hiddenGapIds.has(next.id) ? (
+                    <Badge tone="warning">Missing piece</Badge>
+                  ) : null}
+                </div>
+                <p className="mt-4 max-w-2xl text-sm text-muted-foreground">
+                  <span className="font-medium text-foreground">Why this one? </span>
+                  {dna.hiddenGapIds.has(next.id)
+                    ? "Your goal quietly depends on it, and we've never seen you cover it — so everything above it stays stuck."
+                    : "You've already got what it builds on, and it opens up more of your path than anything else right now."}
+                </p>
+                {/* Advisory pace signal — display-only, never alters the plan. */}
+                <p className="mt-2.5 text-xs text-muted-foreground">
+                  {paceLine(dna.paceByNode.get(next.id) ?? "insufficient")}
+                </p>
               </div>
-              <p className="mt-4 max-w-2xl text-sm text-muted-foreground">
-                <span className="font-medium text-foreground">Why this one? </span>
-                {dna.hiddenGapIds.has(next.id)
-                  ? "Your goal quietly depends on it, and we've never seen you cover it — so everything above it stays stuck."
-                  : "You've already got what it builds on, and it opens up more of your path than anything else right now."}
-              </p>
-              {/* Advisory pace signal — display-only, never alters the plan. */}
-              <p className="mt-2.5 text-xs text-muted-foreground">
-                {paceLine(dna.paceByNode.get(next.id) ?? "insufficient")}
-              </p>
-            </div>
-            <div className="flex flex-col gap-2.5 lg:w-52 lg:shrink-0">
-              <Link to="/practice/$nodeId" params={{ nodeId: next.id }} className="w-full">
-                <Button className="min-h-11 w-full">Practice now</Button>
-              </Link>
-              <Button
-                variant="secondary"
-                className="min-h-11 w-full"
-                onClick={() => markComplete.mutate({ nodeId: next.id, via: "next" })}
-                disabled={markComplete.isPending}
-              >
-                {markComplete.isPending && markComplete.variables?.via === "next"
-                  ? "Updating your map…"
-                  : "Mark complete"}
-              </Button>
-              <Link to="/skill-dna" className="w-full">
-                <Button variant="ghost" className="min-h-11 w-full">
-                  See it on the map
-                </Button>
-              </Link>
-            </div>
-          </div>
-        ) : (
-          <div className="relative">
-            <EmptyState
-              title="Nothing queued yet"
-              description="Answer a few short questions so we can find the right starting point for you."
-              action={
-                <Link to="/diagnostic">
-                  <Button size="sm">Get started</Button>
+              <div className="flex flex-col gap-2.5 lg:w-52 lg:shrink-0">
+                <MagneticLink
+                  to="/practice/$nodeId"
+                  params={{ nodeId: next.id }}
+                  className="w-full min-h-11"
+                >
+                  Practice now
+                </MagneticLink>
+                <MagneticButton
+                  variant="secondary"
+                  className="min-h-11 w-full"
+                  onClick={() => markComplete.mutate({ nodeId: next.id, via: "next" })}
+                  disabled={markComplete.isPending}
+                >
+                  {markComplete.isPending && markComplete.variables?.via === "next"
+                    ? "Updating your map…"
+                    : "Mark complete"}
+                </MagneticButton>
+                <Link to="/skill-dna" className="w-full">
+                  <Button variant="ghost" className="min-h-11 w-full">
+                    See it on the map
+                  </Button>
                 </Link>
-              }
-            />
-          </div>
-        )}
-
-        {/* Inline, non-blocking BKT feedback — pops in, fades after ~2s. */}
-        <div aria-live="polite" className="relative">
-          {completion?.via === "next" ? (
-            <div
-              className={cn(
-                "mt-5 rounded-xl border border-success/40 bg-success-soft/40 px-4 py-3 transition-opacity duration-500",
-                completionVisible ? "animate-pop opacity-100" : "opacity-0",
-              )}
-            >
-              <p className="text-sm text-foreground">Logged — nice work on {completion.name}.</p>
-              <p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
-                <span className="tabular-nums">
-                  Mastery updated: {completion.previous.toFixed(2)} → {completion.next.toFixed(2)}
-                </span>
-                <InfoTip label="mastery" text={HELP_TEXT.mastery} />
-              </p>
+              </div>
             </div>
-          ) : null}
-          {markComplete.isError && markComplete.variables?.via !== "review" ? (
-            <p className="mt-4 text-sm text-destructive" role="alert">
-              We couldn't log that just now — try again.
-            </p>
-          ) : null}
+          ) : (
+            <div className="relative">
+              <EmptyState
+                title="Nothing queued yet"
+                description="Answer a few short questions so we can find the right starting point for you."
+                action={
+                  <Link to="/diagnostic">
+                    <Button size="sm">Get started</Button>
+                  </Link>
+                }
+              />
+            </div>
+          )}
+
+          {/* Inline, non-blocking BKT feedback — pops in, fades after ~2s. */}
+          <div aria-live="polite" className="relative">
+            {completion?.via === "next" ? (
+              <div
+                className={cn(
+                  "mt-5 rounded-xl border border-success/40 bg-success-soft/40 px-4 py-3 transition-opacity duration-500",
+                  completionVisible ? "animate-pop opacity-100" : "opacity-0",
+                )}
+              >
+                <p className="text-sm text-foreground">Logged — nice work on {completion.name}.</p>
+                <p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+                  <span className="tabular-nums">
+                    Mastery updated: {completion.previous.toFixed(2)} → {completion.next.toFixed(2)}
+                  </span>
+                  <InfoTip label="mastery" text={HELP_TEXT.mastery} />
+                </p>
+              </div>
+            ) : null}
+            {markComplete.isError && markComplete.variables?.via !== "review" ? (
+              <p className="mt-4 text-sm text-destructive" role="alert">
+                We couldn't log that just now — try again.
+              </p>
+            ) : null}
+          </div>
         </div>
       </section>
 
       {/* Compact metric strip — one horizontal band, never four tall cards. */}
-      <Card
-        className="animate-enter mt-5 px-5 py-4 sm:px-6"
-        aria-label="Progress overview"
-      >
+      <Card className="animate-enter mt-5 px-5 py-4 sm:px-6" aria-label="Progress overview">
         <dl className="grid grid-cols-2 gap-x-6 gap-y-4 lg:grid-cols-4">
           <StripMetric
             label={
@@ -448,7 +692,7 @@ function Dashboard() {
             loading={dna.loading}
           >
             <MasteryReadout value={dna.overall} size="sm" />
-            <ProgressBar value={dna.overall * 100} className="mt-2 h-1" />
+            <ProgressBar value={dna.overall * 100} className="mt-2 h-1" animateOnView />
           </StripMetric>
           <StripMetric label="Skills solid" loading={dna.loading}>
             <span className="text-base font-semibold tabular-nums text-foreground">
@@ -521,7 +765,10 @@ function Dashboard() {
                   {upcoming.map((item, i) => (
                     <li key={item.id} className="relative flex items-baseline gap-3 py-2.5">
                       {/* connected timeline spine */}
-                      <span aria-hidden="true" className="relative flex w-3 shrink-0 justify-center self-stretch">
+                      <span
+                        aria-hidden="true"
+                        className="relative flex w-3 shrink-0 justify-center self-stretch"
+                      >
                         {i < upcoming.length - 1 ? (
                           <span className="absolute inset-y-0 w-px bg-border" />
                         ) : null}
@@ -569,8 +816,8 @@ function Dashboard() {
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-foreground">{item.name}</p>
                       <p className="mt-0.5 text-xs text-muted-foreground">
-                        {masterySentence(item.decayed)} — this one's faded since you last
-                        practiced it.
+                        {masterySentence(item.decayed)} — this one's faded since you last practiced
+                        it.
                       </p>
                     </div>
                     <Button
@@ -783,9 +1030,7 @@ function StripMetric({
 }) {
   return (
     <div className="min-w-0">
-      <dt className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-        {label}
-      </dt>
+      <dt className="flex items-center gap-2 text-xs font-medium text-muted-foreground">{label}</dt>
       <dd className="mt-1.5">{loading ? <Skeleton className="h-5 w-20" /> : children}</dd>
     </div>
   );
@@ -823,8 +1068,7 @@ function ReplanPanel({
   }
 
   const { diff, dropped } = result;
-  const nothingChanged =
-    diff.added.length === 0 && diff.removed.length === 0 && !diff.reordered;
+  const nothingChanged = diff.added.length === 0 && diff.removed.length === 0 && !diff.reordered;
 
   return (
     <Card className="animate-pop border-primary/40 px-5 py-5 sm:px-6" as="section">
@@ -855,8 +1099,8 @@ function ReplanPanel({
           {dropped.length ? (
             <p className="text-sm text-foreground">
               <span className="font-medium">Removed: </span>
-              {dropped.join(", ")} — {dropped.length === 1 ? "it's" : "they're"} optional and
-              lower priority right now, so we're focusing your time elsewhere.
+              {dropped.join(", ")} — {dropped.length === 1 ? "it's" : "they're"} optional and lower
+              priority right now, so we're focusing your time elsewhere.
             </p>
           ) : null}
           {diff.added.length ? (

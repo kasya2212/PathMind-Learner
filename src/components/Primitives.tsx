@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { masteryBand, masteryGlyph, masteryLabel, masteryPercent } from "@/lib/mastery";
@@ -59,12 +59,7 @@ type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   size?: "sm" | "md" | "lg";
 };
 
-export function Button({
-  variant = "primary",
-  size = "md",
-  className,
-  ...props
-}: ButtonProps) {
+export function Button({ variant = "primary", size = "md", className, ...props }: ButtonProps) {
   return (
     <button
       {...props}
@@ -89,14 +84,46 @@ export function ProgressBar({
   value,
   className,
   tone = "primary",
+  animateOnView = false,
 }: {
   value: number;
   className?: string;
   tone?: "primary" | "success" | "warning";
+  animateOnView?: boolean;
 }) {
   const clamped = Math.max(0, Math.min(100, value));
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [revealed, setRevealed] = useState(!animateOnView);
+
+  useEffect(() => {
+    if (!animateOnView) return;
+
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduceMotion) {
+      setRevealed(true);
+      return;
+    }
+
+    const element = ref.current;
+    if (!element) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          setRevealed(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.2 },
+    );
+
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [animateOnView]);
+
   return (
     <div
+      ref={ref}
       className={cn("h-2 w-full overflow-hidden rounded-full bg-surface-sunken", className)}
       role="progressbar"
       aria-valuenow={Math.round(clamped)}
@@ -105,12 +132,12 @@ export function ProgressBar({
     >
       <div
         className={cn(
-          "h-full rounded-full transition-[width] duration-500 ease-out",
+          "h-full rounded-full transition-[width] duration-700 ease-out",
           tone === "primary" && "bg-primary",
           tone === "success" && "bg-success",
           tone === "warning" && "bg-warning",
         )}
-        style={{ width: `${clamped}%` }}
+        style={{ width: revealed ? `${clamped}%` : "0%" }}
       />
     </div>
   );
